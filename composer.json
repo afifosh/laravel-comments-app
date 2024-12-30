@@ -2,28 +2,20 @@
     "name": "laravel/laravel",
     "type": "project",
     "description": "The Laravel Framework.",
-    "keywords": ["framework", "laravel"],
-    "license": "MIT",
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../laravel-comments"
-        },
-        {
-            "type": "path",
-            "url": "../laravel-comments-livewire"
-        }
+    "keywords": [
+        "framework",
+        "laravel"
     ],
+    "license": "MIT",
     "require": {
         "php": "^8.2",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/framework": "^11.0",
-        "laravel/horizon": "^5.9",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",
         "league/flysystem-aws-s3-v3": "^3.0",
-        "spatie/laravel-comments": "2.x-dev",
-        "spatie/laravel-comments-livewire": "3.x-dev",
+        "spatie/laravel-comments": "*",
+        "spatie/laravel-comments-livewire": "*",
         "spatie/laravel-markdown": "^2.2",
         "spatie/laravel-ray": "^1.29"
     },
@@ -53,19 +45,13 @@
             "@php artisan package:discover --ansi"
         ],
         "post-update-cmd": [
-            "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
-            "@php artisan horizon:publish --ansi"
+            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
         ],
         "post-root-package-install": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
         ],
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi"
-        ],
-        "pull": [
-            "cd ../laravel-comments;git pull origin main",
-            "cd ../laravel-comments-livewire;git pull origin main",
-            "git pull origin main"
         ]
     },
     "extra": {
@@ -79,5 +65,11 @@
         "sort-packages": true
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://satis.spatie.be"
+        }
+    ]
 }

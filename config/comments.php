@@ -1,18 +1,19 @@
 <?php
 
-use Spatie\Comments\CommentTransformers\SmartMentionsTransformer;
+use Spatie\Comments\Actions\ApproveCommentAction;
+use Spatie\Comments\Actions\RejectCommentAction;
+use Spatie\Comments\Actions\ResolveMentionsAutocompleteAction;
+use Spatie\Comments\CommentTransformers\MentionsTransformer;
 use Spatie\Comments\Notifications\ApprovedCommentNotification;
 use Spatie\Comments\Notifications\PendingCommentNotification;
 use Spatie\Comments\Actions\SendNotificationsForApprovedCommentAction;
-use Spatie\Comments\Actions\RejectCommentAction;
-use Spatie\Comments\Actions\ApproveCommentAction;
 use Spatie\Comments\Actions\SendNotificationsForPendingCommentAction;
 use Spatie\Comments\Actions\ProcessCommentAction;
 use Spatie\Comments\Models\Reaction;
 use Spatie\Comments\Models\Comment;
 use Spatie\Comments\CommentTransformers\MarkdownToHtmlTransformer;
 use Spatie\Comments\Models\CommentNotificationSubscription;
-use Spatie\LivewireComments\Resolvers\MentionAutocompleteResolver;
+use Spatie\Comments\Support\CommentSanitizer;
 
 return [
     /*
@@ -21,6 +22,10 @@ return [
      */
     'allowed_reactions' => ['👍', '🥳', '👀', '😍', '💅'],
 
+    /*
+     * You can allow guests to post comments. They will not be able to use
+     * reactions.
+     */
     'allow_anonymous_comments' => false,
 
     /*
@@ -29,7 +34,24 @@ return [
      */
     'comment_transformers' => [
         MarkdownToHtmlTransformer::class,
-        SmartMentionsTransformer::class,
+        MentionsTransformer::class,
+    ],
+
+    /*
+     * After all transformers have transformed the comment text, it will
+     * be passed to this class to sanitize it
+     */
+    'comment_sanitizer' => CommentSanitizer::class,
+
+    /*
+     * These attributes will be allowed in the comment text. All other
+     * attributes will be removed by the comment sanitizer.
+     */
+    'allowed_attributes' => [
+        // enabling this could allow for CSS clickjacking attacks:
+        // https://github.com/spatie/laravel-comments/pull/182#issuecomment-2090665892
+
+        // 'style' => '*',
     ],
 
     /*
@@ -43,7 +65,17 @@ return [
          * The class that will comment on other things. Typically, this
          * would be a user model.
          */
-        'commentator' => \App\Models\User::class,
+        'commentator' => null,
+
+        /*
+         * The field to use to display the name of the commentator model.
+         */
+        'name' => 'name',
+
+        /*
+         * The field to use to display the avatar of the commentator model.
+         */
+        'avatar' => 'avatar',
 
         /*
          * The model you want to use as a Comment model. It needs to be or
@@ -58,7 +90,7 @@ return [
         'reaction' => Reaction::class,
 
         /*
-         * The model you want to use as an opt-out model. It needs to be or
+         * The model you want to use as an subscription model. It needs to be or
          * extend the `Spatie\Comments\Models\CommentNotificationSubscription::class` model.
          */
         'comment_notification_subscription' => CommentNotificationSubscription::class,
@@ -88,7 +120,7 @@ return [
     ],
 
     /*
-     * Unless you need fine-grained customisation, you don't need to change
+     * Unless you need fine-grained customization, you don't need to change
      * these action classes. If you do change any of them, make sure that your class
      * extends the original action class.
      */
@@ -97,12 +129,19 @@ return [
         'send_notifications_for_pending_comment' => SendNotificationsForPendingCommentAction::class,
         'approve_comment' => ApproveCommentAction::class,
         'reject_comment' => RejectCommentAction::class,
+        'resolve_mentions_autocomplete' => ResolveMentionsAutocompleteAction::class,
         'send_notifications_for_approved_comment' => SendNotificationsForApprovedCommentAction::class,
+    ],
+
+    'gravatar' => [
+        /*
+         * Here you can choose which default image to show when a user does not have a Gravatar profile.
+         * See the Gravatar docs for further information https://en.gravatar.com/site/implement/images/
+         */
+        'default_image' => 'mp',
     ],
 
     'mentions' => [
         'enabled' => true,
-        'show_avatars_in_autocomplete' => true,
-        'autocomplete_resolver' => MentionAutocompleteResolver::class,
-    ]
+    ],
 ];
