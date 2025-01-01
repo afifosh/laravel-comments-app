@@ -50,6 +50,7 @@ class CommentList extends Component
     protected $listeners = [
        'comment-deleted-id' => 'handleCommentDeleted',
         'test-event' => 'testMethod',
+        'comment-added' => 'render',
     ];
 
 //     protected $listeners = [
