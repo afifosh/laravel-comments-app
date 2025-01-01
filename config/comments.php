@@ -144,4 +144,26 @@ return [
     'mentions' => [
         'enabled' => true,
     ],
+
+    'pagination' => [
+        /*
+         * Here you can configure the number of results to show before
+         * pagination links are displayed.
+         */
+        'results' => 2,
+
+        /*
+         * If you have multiple paginators on the same page, you can configure the
+         * query string page name to avoid conflicts with the other paginator.
+         * For example, you could set the page_name to be 'comments_page'.
+         */
+        'page_name' => 'page',
+
+        /*
+         * You can choose a different pagination theme like "simple-tailwind" or build
+         * a custom pagination "vendor.livewire.custom-pagination" See the livewire
+         * docs for more information: https://laravel-livewire.com/docs/2.x/pagination#custom-pagination-view
+         */
+        'theme' => 'bootstrap',
+    ],
 ];

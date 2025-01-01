@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Test app</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
     @vite(['resources/css/app.css'])
 
     @livewireStyles
@@ -42,7 +42,25 @@
     </div>
 
     @auth
-        <livewire:comments :model="$post"/>
+        {{-- <livewire:comments :model="$post"/> --}}
+
+        {{-- <livewire:comment-list 
+        :model="$post"
+        no-replies
+        :no-reactions="true"
+        :use-metronic="true"
+        /> --}}
+
+        <livewire:comment-list 
+        :loadMore="true"
+        :model="$post"
+        no-replies
+        :no-reactions="true"
+        :use-metronic="true"
+        />
+
+        <livewire:comment-form :model="$post" />
+        
     @endauth
 
     @guest

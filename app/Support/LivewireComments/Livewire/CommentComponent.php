@@ -8,6 +8,9 @@ use Livewire\Component;
 use Spatie\Comments\Models\Comment;
 use Spatie\Comments\Support\Config;
 
+use Illuminate\Support\Facades\Log;
+
+
 class CommentComponent extends Component
 {
     use AuthorizesRequests;
@@ -76,11 +79,19 @@ class CommentComponent extends Component
     public function delete(): void
     {
         $this->authorize('delete', $this->comment);
-
+        $commentId = $this->comment->id;
         $this->comment->delete();
         $this->comment = null;
 
-        $this->dispatch('delete');
+    // Emit an event to notify the parent component
+//       $this->dispatch('comment-deleted');
+
+Log::info('Comment ID Sent:', ['commentId' => $commentId]);
+            // Emit the event with the comment ID
+          $this->dispatch('comment-deleted-id', $commentId);
+            $this->dispatch('test-event');
+
+       // $this->dispatch('delete');
     }
 
     public function approve(): void

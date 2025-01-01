@@ -10,6 +10,10 @@ use App\Support\LivewireComments\Livewire\CommentComponent as LivewireCommentCom
 use App\Support\LivewireComments\Livewire\CommentsComponent as LivewireCommentsComponent;
 use Spatie\LivewireComments\Livewire\CommentComponent;
 use Spatie\LivewireComments\Livewire\CommentsComponent;
+use App\Support\LivewireComments\Livewire\CommentList; // Include your custom component
+use App\Support\LivewireComments\Livewire\CommentForm; // Include your custom component
+use Livewire\Livewire;
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -35,5 +39,9 @@ class AppServiceProvider extends ServiceProvider
         PendingCommentNotification::sendTo(function () {
             return User::where('email', 'freek@spatie.be')->first();
         });
+
+        // Register the custom CommentListComponent
+        Livewire::component('comment-list', CommentList::class);
+        Livewire::component('comment-form', CommentForm::class);
     }
 }
