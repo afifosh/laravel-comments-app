@@ -46,7 +46,7 @@ class CommentList extends Component
     // protected $queryString = [
     //     'page' => ['except' => 1], // Ensure page is included in the query string
     // ];
-    
+
     protected $listeners = [
        'comment-deleted-id' => 'handleCommentDeleted',
         'test-event' => 'testMethod',
@@ -100,7 +100,7 @@ class CommentList extends Component
         if ($this->isLoadMore) {
             $this->loadMore(); // Load the first batch for Load More
         }
-        Log::info('Comments Mount After LoadMore:', $this->comments->toArray());       
+        Log::info('Comments Mount After LoadMore:', $this->comments->toArray());
         // $this->comments = $this->comments->filter(fn($comment) => $comment['id'] !== 192);
       //  $this->handleCommentDeleted(192);
     }
@@ -128,7 +128,7 @@ class CommentList extends Component
             )
             ->paginate(Config::paginationCount(), ['*'], 'page', $this->page);
     }
-    
+
 
     public function loadMore(): void
     {
@@ -141,16 +141,16 @@ class CommentList extends Component
         $this->comments->push(
             ...$this->paginator->getCollection()
         );
-    
+
         // Update the page number for the next batch
         $this->page++;
-    
+
         // Check if all comments are loaded
         if ($this->comments->count() >= $this->totalComments) {
             $this->dispatch('$refresh'); // Optionally refresh the component
         }
     }
-    
+
     public function comment(): void
     {
         $this->validate(['text' => 'required']);
@@ -196,7 +196,7 @@ class CommentList extends Component
         Log::info('Comments collection after filtering:', $this->comments->toArray());
 
         // Refresh the frontend
-        $this->dispatch('$refresh');
+        // $this->dispatch('$refresh');
     }
 
 
@@ -273,9 +273,9 @@ class CommentList extends Component
         $this->totalComments = $this->model->comments()->count();
 
         // Reset total comments and clear the collection
-    
+
         $this->comments = collect(); // Reset the comments collection to an empty collection
-        
+
 
         // Emit an event to refresh the comments list
        // $this->dispatch('comments-deleted');
@@ -288,7 +288,16 @@ class CommentList extends Component
         dd('Method executed');
     }
 
+    public function deleteComment($commentId)
+    {
+        $comment = $this->comments->firstWhere('id', $commentId);
 
+        $this->authorize('delete', $comment);
+
+        $comment->delete();
+
+        $this->handleCommentDeleted($commentId);
+    }
 
     public function render(): View
     {

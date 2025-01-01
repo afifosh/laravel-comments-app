@@ -56,7 +56,7 @@
                                     :title="__('comments::comments.delete_confirmation_title')"
                                 >
                                     <p>{{ __('comments::comments.delete_confirmation_text') }}</p>
-                                    <x-comments::button danger small wire:click="delete({{ $comment->id }})">
+                                    <x-comments::button danger small wire:click="$parent.deleteComment({{ $comment->id }})">
                                         {{ __('comments::comments.delete') }}
                                     </x-comments::button>
                                 </x-comments::modal>
