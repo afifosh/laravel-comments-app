@@ -150,6 +150,7 @@ class CommentList extends Component
         if ($this->comments->count() >= $this->totalComments) {
             $this->dispatch('$refresh'); // Optionally refresh the component
         }
+        $this->dispatch('$refresh');
     }
 
     public function comment(): void
@@ -176,7 +177,7 @@ class CommentList extends Component
         $this->saveNotificationSubscription();
     }
 
-    #[On('comment-deleted-id')]
+    // #[On('comment-deleted-id')]
     public function handleCommentDeleted(int|string $commentId): void
     {
         if (!$commentId) {
@@ -184,7 +185,7 @@ class CommentList extends Component
             return;
         }
 
-        logger('Event received:', ['data' => $commentId]);
+    
 
         Log::info('Handling comment deletion.', ['commentId' => $commentId]);
 
@@ -277,7 +278,7 @@ class CommentList extends Component
 
         $this->comments = collect(); // Reset the comments collection to an empty collection
 
-
+        $this->page = 1;
         // Emit an event to refresh the comments list
        // $this->dispatch('comments-deleted');
 
