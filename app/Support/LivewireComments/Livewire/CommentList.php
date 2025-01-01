@@ -282,6 +282,8 @@ class CommentList extends Component
         // Emit an event to refresh the comments list
        // $this->dispatch('comments-deleted');
 
+       $this->dispatch('$refresh');
+
     }
 
     public function testMethod(): void
