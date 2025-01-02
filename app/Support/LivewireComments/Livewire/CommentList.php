@@ -2,7 +2,6 @@
 
 namespace App\Support\LivewireComments\Livewire;
 
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -17,8 +16,6 @@ use Illuminate\Support\Facades\Log;
 
 class CommentList extends Component
 {
-    use WithPagination;
-
     /** @var \Spatie\Comments\Models\Concerns\HasComments */
     public Model $model;
 
@@ -88,7 +85,7 @@ class CommentList extends Component
         $this->selectedNotificationSubscriptionType = auth()->user()
             ?->notificationSubscriptionType($this->model)?->value ?? NotificationSubscriptionType::Participating->value;
 
-        // $this->comments = collect(); // Initialize as empty collection
+        $this->comments = collect(); // Initialize as empty collection
         $this->loadInitialComments((int) request()->comment);
     }
 
@@ -290,11 +287,10 @@ class CommentList extends Component
 
     public function loadInitialComments($initialCommentId = null)
     {
-        $query = $this->commentsQuery();
-
         if ($initialCommentId) {
             $pivotComment = $this->commentsQuery()->find($initialCommentId);
-            if ($pivotComment) {
+        }
+        if (@$pivotComment) {
                 $olderComments = $this->commentsQuery()->where('created_at', '<=', $pivotComment->created_at)
                     ->orderBy('created_at', 'desc')
                     ->take($this->limit)
@@ -316,11 +312,10 @@ class CommentList extends Component
                 if ($newerComments->count() < $this->limit) {
                     $this->hasMoreBottom = false;
                 }
-            }
         } else {
 
             // load first chunk of comments
-            // $this->comments = $query->take($this->limit)->get();
+            // $this->comments = $this->commentsQuery()->take($this->limit)->get();
             // if ($this->comments->count() < $this->limit) {
             //     $this->hasMoreBottom = false;
             // }
@@ -328,7 +323,7 @@ class CommentList extends Component
 
 
             // load Last chunk of comments
-            $this->comments = $query->latest()->take($this->limit)->get()->reverse();
+            $this->comments = $this->commentsQuery()->latest()->take($this->limit)->get()->reverse();
 
             if ($this->comments->count() < $this->limit) {
                 $this->hasMoreTop = false;
@@ -340,10 +335,10 @@ class CommentList extends Component
 
     public function loadMoreTop()
     {
-        if ($this->hasMoreTop && $this->comments->isNotEmpty()) {
+        if ($this->hasMoreTop) {
             $firstComment = $this->comments->first();
 
-            $olderComments = $this->commentsQuery()->where('created_at', '<', $firstComment->created_at)
+            $olderComments = $this->commentsQuery()->when($firstComment, fn($q) => $q->where('created_at', '<', $firstComment->created_at))
                 ->orderBy('created_at', 'desc')
                 ->take($this->limit)
                 ->get()
@@ -354,20 +349,22 @@ class CommentList extends Component
             }
 
             $this->comments = $olderComments->merge($this->comments);
+
+            $this->dispatch('livewire-loaded-more-top');
         }
     }
 
     public function loadMoreBottom()
     {
-        if ($this->hasMoreBottom && $this->comments->isNotEmpty()) {
+        if ($this->hasMoreBottom) {
             $lastComment = $this->comments->last();
 
-            $newerComments = $this->commentsQuery()->where('created_at', '>', $lastComment->created_at)
+            $newerComments = $this->commentsQuery()->when($lastComment, fn($q) => $q->where('created_at', '>', $lastComment->created_at))
                 ->orderBy('created_at')
                 ->take($this->limit)
                 ->get();
 
-            if ($newerComments->isEmpty()) {
+            if ($newerComments->isEmpty() || $newerComments->count() < $this->limit || $this->commentsQuery()->count() <= $this->comments->count()) {
                 $this->hasMoreBottom = false;
             }
 
