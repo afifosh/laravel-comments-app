@@ -16,7 +16,7 @@
                 <button wire:click="deleteAllComments" class="btn btn-danger">
                     Delete All Comments
                 </button>
-                
+
                 <button @click.prevent="subscriptionsOpen = true" class="comments-subscription-trigger">
                     {{ NotificationSubscriptionType::from($selectedNotificationSubscriptionType)->longDescription() }}
                 </button>
@@ -36,6 +36,15 @@
         @endif
     </header>
 
+    @if ($hasMoreTop)
+        <div class="w-full flex flex-col justify-center items-center text-center gap-2">
+            <button type="button" wire:click="loadMoreTop"
+                    class="bg-slate-100 disabled:bg-slate-50 px-3 py-2 text-slate-500 border-slate-100 rounded hover:cursor-pointer w-fit hover:bg-slate-200">
+                Load more
+            </button>
+        </div>
+    @endif
+
     @forelse($this->comments as $comment)
         @continue(! Gate::check('see', $comment))
         <livewire:comments-comment
@@ -52,25 +61,12 @@
     @endforelse
 
 
-
-    @if ($isLoadMore)
-        @if ($comments->count() < $totalComments)
-        <div class="w-full flex flex-col justify-center items-center text-center gap-2">
-                {{-- @if(!$disableLoadMore) --}}
-                    <button type="button" wire:click="loadMore"
-                            class="bg-slate-100 disabled:bg-slate-50 px-3 py-2 text-slate-500 border-slate-100 rounded hover:cursor-pointer w-fit hover:bg-slate-200">
-                        Load more
-                    </button>
-                {{-- @endif --}}
+        @if ($hasMoreBottom)
+            <div class="w-full flex flex-col justify-center items-center text-center gap-2">
+                <button type="button" wire:click="loadMoreBottom"
+                        class="bg-slate-100 disabled:bg-slate-50 px-3 py-2 text-slate-500 border-slate-100 rounded hover:cursor-pointer w-fit hover:bg-slate-200">
+                    Load more
+                </button>
             </div>
         @endif
-    @else
-    
-        @if ($this->comments->hasPages())
-        {{ $this->comments->links() }}
-        @endif
-
-    @endif
-
-
 </section>

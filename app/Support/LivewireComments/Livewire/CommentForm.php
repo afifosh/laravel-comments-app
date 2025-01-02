@@ -70,9 +70,9 @@ class CommentForm extends Component
 
         $this->text = '';
 
-        $this->newestFirst
-            ? $this->resetPage(Config::paginationPageName())
-            : $this->gotoPage($this->comments->lastPage(), Config::paginationPageName());
+        // $this->newestFirst
+        //     ? $this->resetPage(Config::paginationPageName())
+        //     : $this->gotoPage($this->comments->lastPage(), Config::paginationPageName());
 
         $this->saveNotificationSubscription();
 

@@ -12,8 +12,6 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Spatie\Comments\Enums\NotificationSubscriptionType;
 use Spatie\LivewireComments\Support\Config;
-use Illuminate\Support\Collection;
-use Livewire\Attributes\On;
 
 use Illuminate\Support\Facades\Log;
 
@@ -24,9 +22,11 @@ class CommentList extends Component
     /** @var \Spatie\Comments\Models\Concerns\HasComments */
     public Model $model;
 
-    public int $page = 1;
+    public $comments;
 
-    public Collection $comments;
+    public $limit = 2; // Number of comments to load per scroll
+    public $hasMoreTop = true; // Flag to check if there are more comments above
+    public $hasMoreBottom = true; // Flag to check if there are more comments below
 
     public string $text = '';
 
@@ -50,7 +50,7 @@ class CommentList extends Component
     protected $listeners = [
        'comment-deleted-id' => 'handleCommentDeleted',
         'test-event' => 'testMethod',
-        'comment-added' => 'render',
+        'comment-added' => 'newCommentAdded',
     ];
 
 //     protected $listeners = [
@@ -72,7 +72,6 @@ class CommentList extends Component
         bool $newestFirst = false,
         bool $noReplies = false,
         bool $noReactions = false,
-        bool $loadMore = false, // New parameter to enable Load More
     ): void {
         $this->writable = ! $readOnly;
         $this->showReplies = ! $noReplies;
@@ -89,21 +88,8 @@ class CommentList extends Component
         $this->selectedNotificationSubscriptionType = auth()->user()
             ?->notificationSubscriptionType($this->model)?->value ?? NotificationSubscriptionType::Participating->value;
 
-        $this->isLoadMore = $loadMore;
-
-        // Calculate total comments
-        $this->totalComments = $this->model->comments()->count();
-
-        $this->comments = collect(); // Initialize as empty collection
-
-        Log::info('Comments Mount initialized:', $this->comments->toArray());
-
-        if ($this->isLoadMore) {
-            $this->loadMore(); // Load the first batch for Load More
-        }
-        Log::info('Comments Mount After LoadMore:', $this->comments->toArray());
-        // $this->comments = $this->comments->filter(fn($comment) => $comment['id'] !== 192);
-      //  $this->handleCommentDeleted(192);
+        // $this->comments = collect(); // Initialize as empty collection
+        $this->loadInitialComments((int) request()->comment);
     }
 
     #[Computed]
@@ -128,29 +114,6 @@ class CommentList extends Component
                 fn(Builder $builder) => $builder->oldest(),
             )
             ->paginate(Config::paginationCount(), ['*'], 'page', $this->page);
-    }
-
-
-    public function loadMore(): void
-    {
-        if (!$this->isLoadMore) {
-            return;
-        }
-
-
-        // Append the comments from the current page
-        $this->comments->push(
-            ...$this->paginator->getCollection()
-        );
-
-        // Update the page number for the next batch
-        $this->page++;
-
-        // Check if all comments are loaded
-        if ($this->comments->count() >= $this->totalComments) {
-            $this->dispatch('$refresh'); // Optionally refresh the component
-        }
-        $this->dispatch('$refresh');
     }
 
     public function comment(): void
@@ -185,15 +148,10 @@ class CommentList extends Component
             return;
         }
 
-    
-
         Log::info('Handling comment deletion.', ['commentId' => $commentId]);
 
         // Filter out the deleted comment
         $this->comments = $this->comments->filter(fn($comment) => $comment->id !== $commentId);
-
-        // Recalculate the total comments count
-        $this->totalComments = $this->comments->count();
 
         Log::info('Comments collection after filtering:', $this->comments->toArray());
 
@@ -263,27 +221,10 @@ class CommentList extends Component
 
     public function deleteAllComments(): void
     {
-        // // Ensure the user has permission to delete comments
-        // if (!auth()->user() || !auth()->user()->can('delete', $this->model)) {
-        //     abort(403, 'Unauthorized action.');
-        // }
-
         // Delete all comments associated with the model
         $this->model->comments()->delete();
 
-        // Recalculate total comments
-        $this->totalComments = $this->model->comments()->count();
-
-        // Reset total comments and clear the collection
-
         $this->comments = collect(); // Reset the comments collection to an empty collection
-
-        $this->page = 1;
-        // Emit an event to refresh the comments list
-       // $this->dispatch('comments-deleted');
-
-       $this->dispatch('$refresh');
-
     }
 
     public function testMethod(): void
@@ -307,7 +248,7 @@ class CommentList extends Component
     {
         //return view('comments::livewire.comments');
 
-        $this->totalComments = $this->model->comments()->count(); // Recalculate the total comments
+        $this->totalComments = $this->commentsQuery()->count(); // Recalculate the total comments
 
         return view('livewire.comments.comment-list');
     }
@@ -323,5 +264,127 @@ class CommentList extends Component
         }
 
         return 'livewire::tailwind';
+    }
+
+    public function commentsQuery()
+    {
+        return $this->model
+            ->comments()
+            ->with([
+                'commentator',
+                'nestedComments' => function (HasMany $builder) {
+                    if ($this->newestFirst) {
+                        $builder->latest();
+                    }
+                },
+                'nestedComments.commentator',
+                'reactions.commentator',
+                'nestedComments.reactions.commentator',
+            ]);
+            // ->when(
+            //     $this->newestFirst,
+            //     fn(Builder $builder) => $builder->latest(),
+            //     fn(Builder $builder) => $builder->oldest(),
+            // );
+    }
+
+    public function loadInitialComments($initialCommentId = null)
+    {
+        $query = $this->commentsQuery();
+
+        if ($initialCommentId) {
+            $pivotComment = $this->commentsQuery()->find($initialCommentId);
+            if ($pivotComment) {
+                $olderComments = $this->commentsQuery()->where('created_at', '<=', $pivotComment->created_at)
+                    ->orderBy('created_at', 'desc')
+                    ->take($this->limit)
+                    ->get()
+                    ->reverse();
+
+                $newerComments = $this->commentsQuery()->where(function ($q) use ($pivotComment) {
+                    $q->where('created_at', '>', $pivotComment->created_at);//->orWhere('id', $pivotComment->id);
+                })
+                    ->orderBy('created_at')
+                    ->take($this->limit)
+                    ->get();
+
+                $this->comments = $olderComments->merge($newerComments);
+                if ($olderComments->count() < $this->limit) {
+                    $this->hasMoreTop = false;
+                }
+
+                if ($newerComments->count() < $this->limit) {
+                    $this->hasMoreBottom = false;
+                }
+            }
+        } else {
+
+            // load first chunk of comments
+            // $this->comments = $query->take($this->limit)->get();
+            // if ($this->comments->count() < $this->limit) {
+            //     $this->hasMoreBottom = false;
+            // }
+            // $this->hasMoreTop = false;
+
+
+            // load Last chunk of comments
+            $this->comments = $query->latest()->take($this->limit)->get()->reverse();
+
+            if ($this->comments->count() < $this->limit) {
+                $this->hasMoreTop = false;
+            }
+
+            $this->hasMoreBottom = false;
+        }
+    }
+
+    public function loadMoreTop()
+    {
+        if ($this->hasMoreTop && $this->comments->isNotEmpty()) {
+            $firstComment = $this->comments->first();
+
+            $olderComments = $this->commentsQuery()->where('created_at', '<', $firstComment->created_at)
+                ->orderBy('created_at', 'desc')
+                ->take($this->limit)
+                ->get()
+                ->reverse();
+
+            if ($olderComments->isEmpty()) {
+                $this->hasMoreTop = false;
+            }
+
+            $this->comments = $olderComments->merge($this->comments);
+        }
+    }
+
+    public function loadMoreBottom()
+    {
+        if ($this->hasMoreBottom && $this->comments->isNotEmpty()) {
+            $lastComment = $this->comments->last();
+
+            $newerComments = $this->commentsQuery()->where('created_at', '>', $lastComment->created_at)
+                ->orderBy('created_at')
+                ->take($this->limit)
+                ->get();
+
+            if ($newerComments->isEmpty()) {
+                $this->hasMoreBottom = false;
+            }
+
+            $this->comments = $this->comments->merge($newerComments);
+        }
+    }
+
+    public function newCommentAdded()
+    {
+        $this->hasMoreBottom = true;
+
+        // method 1 - Render latest comment
+        // $this->hasMoreTop = true;
+        // $this->loadInitialComments($this->commentsQuery()->latest()->first()->id);
+
+        // method 2 - Render next chunk
+        $this->loadMoreBottom();
+
     }
 }
